@@ -148,9 +148,116 @@ export const sendVerifyOtp = async(req, res) =>{
                 message: "Account already verified"
             })
         }
+
+        const otp = String(Math.floor(100000 + Math.random() * 900000))
+
+        user.verifyOtp = otp
+        user.verifyOtpExpireAt = date.now() + 24 * 60 * 60 * 1000
+
+        await user.save()
+
+        const mailOption = {
+            from: process.env.SENDER_EMAIL,
+            to: user.email,
+            subject: 'BLABLABLA verification',
+            text: `Your account verification otp is ${otp}. Verify your account with this otp`
+        }
+
+        await transporter.sendMail(mailOption)
+
+        res.json({
+            success: true,
+            message: "Verification otp sent to email"
+        })
+
     } catch (error) {
         res.json({ 
             success: false, message: error.message
         })
+    }
+}
+
+//verify the user using otp
+export const verifyEmail = async(req, res) =>{
+    const {userId, otp} = req.body
+
+    if(!userId || !otp){
+        return res.json({
+            success: false,
+            message: "Missing Details"
+        })
+    }
+
+    try {
+        const user = await userModel.findById(userId)
+
+        if(!userId){
+            return res.json({ 
+                success: false,
+                message: 'User not found'
+            })
+        }
+
+        if(user.verifyOtp == '' || user.verifyOtp !== otp){
+            return res.json({
+                success: false,
+                message: 'Invalid otp'
+            })
+        }
+
+        if(user.verifyOtpExpireAt < Date.now()){
+            return res.json({
+                success: false,
+                message: 'otp expired'
+            })
+        }
+
+        user.isAccountVerified = true
+        user.verifyOtp = ''
+        user.verifyOtpExpireAt = 0
+
+        await user.save()
+
+        return res.json({
+            success: true,
+            message: 'Email verified successfully'
+        })
+    } catch (error) {
+        return res.json({
+            success: false,
+            message: error.message
+        })
+    }
+}
+
+//check if user is authenticated
+export const isAuthenticated = async(req, res) =>{
+    try {
+        return res.json({
+            success: true,
+            message: "User is authenticated"
+        })
+    } catch (error) {
+        res.json({ success: false, message: error.message})
+    }
+}
+
+//send password reset otp
+export const sendResetOtp = async(req, res) =>{
+    const {email} = req.body
+
+    if(!email){
+        return res.json({
+            success: false,
+            message: 'Email is required'
+        })
+    }
+
+    try {
+        
+    } catch (error) {
+        return res.json({
+            success: false, 
+            message: error.message})
     }
 }
